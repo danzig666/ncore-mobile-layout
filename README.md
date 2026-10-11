@@ -19,12 +19,12 @@ A parancsfájl automatikus módban legfeljebb 760 CSS-képpont szélességű, el
 - reszponzívvá teszi az oldal fő tartalmi elemeit;
 - lenyitható, érintésbarát főmenüt hoz létre;
 - változatlanul elérhető keresést és külön nyitható szűrőpanelt hoz létre, a kiválasztott feltételek összefoglalásával;
-- a kereső kategória- és típusnevei közvetlenül kattintható szűrőlinkek; a mellettük lévő jelölőnégyzetek megtartják az eredeti kiválasztási vagy altípusnyitó működésüket;
-- olvasható torrentkártyákat jelenít meg, mindig látható mérettel, seed/leech számmal, kategóriával és feltöltési dátummal/idővel; az időbélyeg a meglévő gombsorba kerül, további sor nélkül;
+- a keresőben az összes konkrét típus (például Film HD/EN) látszik a Szűrők panelen, kategóriánként csoportosítva; a típusnevek közvetlenül kattintható szűrőlinkek, a mellettük lévő jelölőnégyzetek pedig megtartják az eredeti kiválasztási működésüket;
+- tömör torrentkártyákat jelenít meg, mindig látható mérettel, seed/leech számmal, kategóriával és feltöltési dátummal/idővel; az adatok melletti könyvjelzőgomb 44×44 képpontos érintési felületet kap;
 - kibontáskor sem ismétli meg a dátumot és a méretet külön nagy blokkokban, és elrejti a külön letöltésszám- és feltöltőnév-mezőt;
-- külön kibontás- és részletekgombot, valamint szöveges állapotjelzéseket ad a torrentekhez;
+- a torrent neve az eredeti működés szerint kibontja és visszacsukja a tartalmat; külön Kibontás/Részletek gombsor helyett a kibontott tartalom meglévő részleteklinkje használható;
 - mobilon elrejti az aNi kiemelőt, és nem írja ki az „Új”, „Ellenőrzött” és „Ellenőrizetlen” feliratokat; asztalon az aNi megjelenése változatlan;
-- az aNi torrentelrejtő ikon helyén mobilon kattintható IMDb-pontszámot jelenít meg, ha van értékelés;
+- az aNi torrentelrejtő ikon helyén mobilon kattintható IMDb-pontszámot jelenít meg, ha van értékelés; a szín az eredeti IMDb-linkét követi, az aNi színezését megtartva;
 - mobilos rendezést és egyszerű előző/következő lapozót biztosít a lista felett és alatt;
 - nagyobb érintési felületeket ad a gomboknak, lapozóknak és űrlapmezőknek;
 - mobilra igazítja a torrent részleteit, a hozzászólásokat és a könyvjelzőkezelőt;

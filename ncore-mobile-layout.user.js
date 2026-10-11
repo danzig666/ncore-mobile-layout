@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         nCore mobilnézet
 // @namespace    local.ncore.mobile
-// @version      1.3.3
+// @version      1.4.0
 // @description  Érintésbarát mobilfelület, változatlan asztali nézettel; nCore aNi mellett is használható.
 // @homepageURL  https://github.com/danzig666/ncore-mobile-layout
 // @supportURL   https://github.com/danzig666/ncore-mobile-layout/issues
@@ -1696,12 +1696,12 @@
     #infosav_extra > div:not(.i_e_vonal):not(.ncm-primary-shortcut) { display: none !important; }
     #infosav.ncm-account-open #infosav_adatok { display: block; }
     #infosav.ncm-account-open #infosav_extra > div:not(.i_e_vonal) { display: block !important; }
-    .ncm-account-toggle, .ncm-row-toggle, .ncm-details-link, .ncm-dialog-close, .ncm-reset {
+    .ncm-account-toggle, .ncm-sort-apply, .ncm-dialog-close, .ncm-reset {
         display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
         padding: 8px 12px; border: 1px solid var(--ncm-border); border-radius: 6px;
         background: var(--ncm-dark); color: var(--ncm-text); font: inherit; cursor: pointer;
     }
-    .ncm-owned :focus-visible, .ncm-account-toggle:focus-visible, .ncm-row-toggle:focus-visible {
+    .ncm-owned :focus-visible, .ncm-account-toggle:focus-visible, .ncm-sort-apply:focus-visible, .box_torrent .torrent_txt > a:focus-visible, .box_torrent .torrent_txt2 > a:focus-visible {
         outline: 3px solid var(--ncm-accent); outline-offset: 2px;
     }
     #kereses_mezo { display: block; }
@@ -1720,6 +1720,8 @@
     .ncm-field select, .ncm-field input { width: 100% !important; }
     #kategoriak #table_torrcat, #kategoriak [id$="_resz"] table, #kategoriak [id$="_resz"] tbody { display: block !important; width: 100% !important; }
     #kategoriak #table_torrcat tr, #kategoriak [id$="_resz"] tr { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; }
+    #kategoriak .ncm-filter-panel > div[id$="_resz"] { display: block !important; width: 100% !important; margin-top: 8px; }
+    #kategoriak .ncm-filter-panel > div[id$="_resz"] tr > td:first-child { grid-column: 1 / -1; padding: 8px 0 4px !important; font-size: 14px; }
     #kategoriak td[hidden] { display: none !important; }
     #kategoriak .ncm-check-cell { width: auto !important; padding: 0 !important; min-width: 0; }
     .ncm-check-label { display: flex; min-height: 44px; align-items: center; gap: 3px; padding: 4px; overflow-wrap: anywhere; cursor: pointer; }
@@ -1738,28 +1740,29 @@
     .ncm-pager details { flex-basis: 100%; }
     .ncm-pager summary { min-height: 44px; padding: 10px; cursor: pointer; text-align: center; }
     .ncm-pager details a { margin: 3px; }
-    .box_torrent, .box_torrent.ncm-expanded { display: block !important; margin-bottom: 8px; border: 1px solid var(--ncm-border) !important; border-radius: 8px; }
+    .box_torrent, .box_torrent.ncm-expanded { display: block !important; margin-bottom: 6px; border: 1px solid var(--ncm-border) !important; border-radius: 8px; }
     .box_torrent .box_alap_img, .box_torrent.ncm-expanded .box_alap_img { display: none !important; }
     .box_torrent .box_nagy, .box_torrent .box_nagy2 { display: block !important; width: 100% !important; }
-    .box_torrent .box_nev2 { padding: 10px !important; height: auto !important; min-height: 0; border: 0; }
+    .box_torrent .box_nev2 { padding: 8px 8px 5px !important; height: auto !important; min-height: 0; border: 0; }
     .box_torrent .torrent_txt, .box_torrent .torrent_txt2 { display: block !important; width: 100% !important; }
     .box_torrent .torrent_txt > a, .box_torrent .torrent_txt2 > a { font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
-    .torrent_txt_also { padding: 0 !important; margin-top: 5px !important; height: auto !important; overflow: visible; white-space: normal; }
+    .torrent_txt_also { padding: 0 !important; margin-top: 3px !important; height: auto !important; overflow: visible; white-space: normal; }
     .torrent_txt_also .siterank, .torrent_txt_also .siterank > span { display: flex; flex-wrap: wrap; gap: 4px; overflow: visible; white-space: normal; font-size: 12px; }
     .box_torrent .ncm-category-label { display: none !important; }
-    .ncm-compact-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0 10px 8px; font-size: 12px; line-height: 1.5; }
-    .ncm-compact-meta span { overflow-wrap: anywhere; }
+    .ncm-row-summary { display: grid; grid-template-columns: minmax(0,1fr) 44px; align-items: center; gap: 8px; padding: 0 8px 8px; }
+    .ncm-row-info { min-width: 0; }
+    .ncm-compact-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; padding: 0; font-size: 12px; line-height: 1.4; }
+    .ncm-compact-meta span { white-space: nowrap; }
     .ncm-compact-meta .ncm-zero-seed { color: #ffe09d; }
-    .ncm-status-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 10px 8px; }
+    .ncm-status-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 3px 0 0; }
+    .ncm-status-badges[hidden] { display: none !important; }
     .ncm-status-badges span { padding: 3px 6px; background: var(--ncm-dark); border-radius: 4px; font-size: 12px; }
     .box_torrent .torrent_new, .box_torrent .torrent_gold, .box_torrent .torrent_hidden,
     .box_torrent .torrent_ok, .box_torrent .torrent_unchecked, .box_torrent .torrent_err { display: none !important; }
-    .ncm-row-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 74px auto; align-items: center; gap: 4px; padding: 0 10px 10px; }
-    .ncm-row-actions .ncm-row-toggle, .ncm-row-actions .ncm-details-link { min-width: 0; padding: 8px 4px; font-size: 12px; }
-    .ncm-uploaded { display: block; font-size: 11px; line-height: 1.4; text-align: center; white-space: nowrap; color: var(--ncm-muted); font-variant-numeric: tabular-nums; }
-    .ncm-uploaded > span { display: block; }
+    .ncm-uploaded { display: block; margin-top: 3px; font-size: 11px; line-height: 1.4; text-align: left; white-space: nowrap; color: var(--ncm-muted); font-variant-numeric: tabular-nums; }
+    .ncm-uploaded > span { display: inline; }
     .box_torrent .torrent_konyvjelzo, .box_torrent .torrent_konyvjelzo2 {
-        position: static !important; min-width: 44px; margin-left: auto !important; flex: 0 0 44px;
+        position: static !important; width: 44px !important; min-width: 44px; height: 44px !important; min-height: 44px; margin: 0 !important;
     }
     .box_torrent .box_feltoltve2, .box_torrent .box_meret2, .box_torrent .box_d2,
     .box_torrent .box_feltolto2, .box_torrent.ncm-expanded .box_feltolto2,
@@ -1782,7 +1785,7 @@
         min-width: 44px; min-height: 44px; margin: 0 !important; cursor: pointer;
     }
     .box_torrent .ani-torrent-highlighter, .box_torrent .ani-torrent-hide, .box_torrent .ncm-original-imdb { display: none !important; }
-    .ncm-imdb-score { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 1px solid var(--ncm-border); border-radius: 6px; color: #ffe09d; }
+    .ncm-imdb-score { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 1px solid var(--ncm-border); border-radius: 6px; }
     .ncm-imdb-score > span { font-size: 9px; line-height: 1.3; }
     .ncm-imdb-score > strong { font-size: 14px; line-height: 1.3; }
     .box_torrent .ani-torrent-hide .torrent-hide { padding: 12px; }
@@ -1824,7 +1827,7 @@
             if (!node.hasAttribute('class')) session.classless.add(node);
         }
         if (!classes.has(name)) classes.set(name, node.classList.contains(name));
-        node.classList.toggle(name, enabled);
+        if (node.classList.contains(name) !== enabled) node.classList.toggle(name, enabled);
     }
 
     function own(node) { session.owned.add(node); return node; }
@@ -1955,9 +1958,20 @@
             const text = labelCell?.textContent.trim();
             if (!cell || !labelCell || !text) continue;
             const categoryLink = labelCell.querySelector('a[href]');
+            if (categoryLink && /^nyit_/.test(checkbox.name)) {
+                // Type groups are all visible within the mobile filter panel.
+                // Retain native disclosure controls only for desktop restoration.
+                classToggle(categoryLink, 'ncm-category-link');
+                classToggle(labelCell, 'ncm-check-cell');
+                setAttribute(cell, 'hidden', '');
+                continue;
+            }
+            const group = checkbox.closest('div[id$="_resz"]');
+            const groupName = group?.querySelector('tr > td:first-child')?.textContent.trim().replace(/:$/, '').trim();
+            if (categoryLink && groupName) setAttribute(categoryLink, 'aria-label', `${groupName} ${text}`);
             const label = own(element('label', 'ncm-check-label'));
             if (!checkbox.id) setAttribute(checkbox, 'id', `ncm-category-${++checkIndex}`);
-            setAttribute(checkbox, 'aria-label', text);
+            setAttribute(checkbox, 'aria-label', groupName ? `${groupName} ${text}` : text);
             label.htmlFor = checkbox.id;
             // Retain the original category nodes for exact desktop restoration.
             move(checkbox, label);
@@ -2019,7 +2033,7 @@
         for (const [control, text] of [[sort, 'Rendezés'], [direction, 'Sorrend']]) {
             const label = element('label', '', text); label.appendChild(control); controls.appendChild(label);
         }
-        const apply = button('Rendezés', 'ncm-row-toggle'); controls.appendChild(apply);
+        const apply = button('Rendezés', 'ncm-sort-apply'); controls.appendChild(apply);
         listen(apply, 'click', () => {
             const source = links.find(a => new URL(a.href).searchParams.get('miszerint') === sort.value);
             const url = new URL(source.href);
@@ -2078,18 +2092,18 @@
         if (!state || !state.meta.isConnected || state.title !== title) {
             const meta = own(element('div', 'ncm-compact-meta'));
             const badges = own(element('div', 'ncm-status-badges'));
-            const actions = own(element('div', 'ncm-row-actions'));
-            const toggle = button('Kibontás', 'ncm-row-toggle');
-            toggle.setAttribute('aria-expanded', 'false');
-            const details = element('a', 'ncm-details-link', 'Részletek'); details.href = title.href;
+            const summary = own(element('div', 'ncm-row-summary'));
+            const info = own(element('div', 'ncm-row-info'));
             const uploaded = element('time', 'ncm-uploaded');
-            actions.append(toggle, details, uploaded); name.after(meta, badges, actions);
-            state = {meta, badges, actions, toggle, title, uploaded, uploadedKey: '', metaKey: '', statusKey: ''}; session.rows.set(row, state);
-            listen(toggle, 'click', () => title.click());
+            info.append(meta, uploaded, badges); summary.append(info); name.after(summary);
+            state = {meta, badges, summary, title, uploaded, uploadedKey: '', metaKey: '', statusKey: ''}; session.rows.set(row, state);
+            listen(title, 'keydown', event => {
+                if (event.key === ' ' && !event.repeat) { event.preventDefault(); title.click(); }
+            });
             // Retain the site's title expansion handler and all original aNi controls.
         }
         const bookmark = row.querySelector('.torrent_konyvjelzo, .torrent_konyvjelzo2');
-        if (bookmark && bookmark.parentElement !== state.actions) move(bookmark, state.actions);
+        if (bookmark && bookmark.parentElement !== state.summary) move(bookmark, state.summary);
         keyboard(bookmark, 'Könyvjelző hozzáadása');
         const uploadedNode = row.querySelector('.box_feltoltve2');
         const uploadedText = [...(uploadedNode?.childNodes || [])].map(node => node.nodeName === 'BR' ? ' ' : node.textContent).join('').trim().replace(/\s+/g, ' ');
@@ -2098,7 +2112,7 @@
             const match = uploadedText.match(/(\d{4}-\d{2}-\d{2})\s*(\d{2}:\d{2}(?::\d{2})?)/);
             if (match) {
                 state.uploaded.dateTime = `${match[1]}T${match[2]}`;
-                state.uploaded.append(element('span', '', match[1]), element('span', '', match[2]));
+                state.uploaded.append(element('span', '', match[1]), document.createTextNode(' '), element('span', '', match[2]));
             } else {
                 state.uploaded.removeAttribute('datetime'); state.uploaded.textContent = uploadedText;
             }
@@ -2142,6 +2156,8 @@
                 }
                 state.imdb.href = imdb.href; state.imdb.target = imdb.target;
                 state.imdb.rel = 'noopener noreferrer';
+                const color = getComputedStyle(imdb).color;
+                if (state.imdb.style.color !== color) state.imdb.style.setProperty('color', color, 'important');
                 state.imdb.setAttribute('aria-label', `IMDb értékelés: ${rating}`);
                 setText(state.imdb.querySelector('strong'), rating);
                 classToggle(imdb, 'ncm-original-imdb');
@@ -2149,11 +2165,10 @@
         }
         const panel = panelForRow(row); const open = isPanelOpen(panel);
         classToggle(row, 'ncm-expanded', open);
-        state.toggle.setAttribute('aria-expanded', String(open));
-        setText(state.toggle, open ? 'Bezárás' : 'Kibontás');
+        setAttribute(title, 'aria-expanded', String(open));
         if (panel) {
             if (!panel.id) setAttribute(panel, 'id', `ncm-panel-${++session.panelIndex}`);
-            state.toggle.setAttribute('aria-controls', panel.id);
+            setAttribute(title, 'aria-controls', panel.id);
         }
     }
 
@@ -2263,7 +2278,7 @@
         session.observer = new MutationObserver(mutations => {
             if (!session) return;
             for (const mutation of mutations) {
-                if (mutation.type === 'attributes' && !mutation.target.matches('.torrent_lenyilo,.torrent_lenyilo2,.generic_dialog')) continue;
+                if (mutation.type === 'attributes' && !mutation.target.matches('.torrent_lenyilo,.torrent_lenyilo2,.generic_dialog,.siterank a')) continue;
                 session.pending.add(mutation.target instanceof Element ? mutation.target : mutation.target.parentElement);
                 for (const node of mutation.addedNodes || []) if (node instanceof Element) session.pending.add(node);
             }
@@ -2274,7 +2289,7 @@
                 updateDialogs(); session.updateFilters?.();
             });
         });
-        session.observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden']});
+        session.observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden','class']});
     }
 
     function deactivate() {
