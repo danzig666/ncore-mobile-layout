@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         nCore mobilnézet
 // @namespace    local.ncore.mobile
-// @version      1.3.1
+// @version      1.3.2
 // @description  Érintésbarát mobilfelület, változatlan asztali nézettel; nCore aNi mellett is használható.
 // @homepageURL  https://github.com/danzig666/ncore-mobile-layout
 // @supportURL   https://github.com/danzig666/ncore-mobile-layout/issues
@@ -1757,6 +1757,7 @@
         position: static !important; min-width: 44px; margin-left: auto !important; flex: 0 0 44px;
     }
     .box_torrent .box_feltoltve2, .box_torrent .box_meret2, .box_torrent .box_d2,
+    .box_torrent:not(.ncm-expanded) .box_feltoltve2, .box_torrent:not(.ncm-expanded) .box_meret2,
     .box_torrent.ncm-expanded .box_feltoltve2, .box_torrent.ncm-expanded .box_meret2, .box_torrent.ncm-expanded .box_d2,
     .box_torrent .users_box_sepa, .box_torrent .users_box_sepa2,
     .box_torrent .box_s2, .box_torrent .box_l2,
@@ -1769,6 +1770,8 @@
     .box_torrent .box_d2::before, .box_torrent .box_feltolto2::before { font-size: 11px; }
     /* Optional aNi wrappers; native rows do not depend on these selectors. */
     .box_torrent .ani-box-name { display: grid !important; grid-template-columns: minmax(0,1fr) 44px; gap: 6px; width: 100% !important; height: auto !important; }
+    .box_torrent .ani-box-name.ncm-no-imdb { grid-template-columns: minmax(0,1fr); }
+    .box_torrent .ani-box-name.ncm-no-imdb .ani-torrent-icons { display: none !important; }
     .box_torrent .ani-torrent-name { grid-column: 1; grid-row: 1; width: 100% !important; min-width: 0 !important; white-space: normal !important; overflow: visible !important; }
     .box_torrent .ani-torrent-icons { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: auto !important; height: auto !important; }
     .box_torrent .ani-box-bookmark:empty, .box_torrent .ani-torrent-icons:empty { display: none; }
@@ -1776,8 +1779,14 @@
         display: inline-flex; position: static !important; align-items: center; justify-content: center;
         min-width: 44px; min-height: 44px; margin: 0 !important; cursor: pointer;
     }
-    .box_torrent .ani-torrent-highlighter { display: none !important; }
+    .box_torrent .ani-torrent-highlighter, .box_torrent .ani-torrent-hide, .box_torrent .ncm-original-imdb { display: none !important; }
+    .ncm-imdb-score { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; border: 1px solid var(--ncm-border); border-radius: 6px; color: #ffe09d; }
+    .ncm-imdb-score > span { font-size: 9px; line-height: 1.3; }
+    .ncm-imdb-score > strong { font-size: 14px; line-height: 1.3; }
     .box_torrent .ani-torrent-hide .torrent-hide { padding: 12px; }
+    body.ncm-details-page .hsz_block { grid-template-columns: minmax(0,1fr); }
+    body.ncm-details-page .hsz_bal { display: none !important; }
+    body.ncm-details-page .hsz_jobb_all, body.ncm-details-page .hsz_jobb { grid-column: 1; }
     .generic_dialog { padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
     .generic_dialog .generic_dialog_popup { min-height: 0; align-items: flex-start; padding-top: 20px; }
     .ncm-dialog-close { display: flex; margin: 0 0 8px auto; }
@@ -1808,7 +1817,10 @@
     function classToggle(node, name, enabled = true) {
         if (!node) return;
         let classes = session.classes.get(node);
-        if (!classes) session.classes.set(node, classes = new Map());
+        if (!classes) {
+            session.classes.set(node, classes = new Map());
+            if (!node.hasAttribute('class')) session.classless.add(node);
+        }
         if (!classes.has(name)) classes.set(name, node.classList.contains(name));
         node.classList.toggle(name, enabled);
     }
@@ -2106,7 +2118,25 @@
             }
         }
         state.badges.hidden = !status.length;
-        keyboard(row.querySelector('.ani-torrent-hide .torrent-hide'), 'Torrent elrejtése (aNi)');
+        const aniName = row.querySelector('.ani-box-name');
+        const aniIcons = row.querySelector('.ani-torrent-icons');
+        if (aniName && aniIcons) {
+            const imdb = [...row.querySelectorAll('.siterank a')].find(a => /imdb\s*:/i.test(a.textContent));
+            const rating = imdb?.textContent.match(/imdb\s*:\s*(\d+(?:[.,]\d+)?)/i)?.[1];
+            classToggle(aniName, 'ncm-no-imdb', !rating);
+            if (rating) {
+                if (!state.imdb) {
+                    state.imdb = own(element('a', 'ncm-imdb-score'));
+                    state.imdb.append(element('span', '', 'IMDb'), element('strong'));
+                    aniIcons.appendChild(state.imdb);
+                }
+                state.imdb.href = imdb.href; state.imdb.target = imdb.target;
+                state.imdb.rel = 'noopener noreferrer';
+                state.imdb.setAttribute('aria-label', `IMDb értékelés: ${rating}`);
+                setText(state.imdb.querySelector('strong'), rating);
+                classToggle(imdb, 'ncm-original-imdb');
+            } else if (state.imdb) { state.imdb.remove(); state.imdb = null; }
+        }
         const panel = panelForRow(row); const open = isPanelOpen(panel);
         classToggle(row, 'ncm-expanded', open);
         state.toggle.setAttribute('aria-expanded', String(open));
@@ -2207,7 +2237,7 @@
 
     function activate() {
         if (session || !document.body) return;
-        session = { controller:new AbortController(), owned:new Set(), attributes:new Map(), classes:new Map(), moved:new Map(),
+        session = { controller:new AbortController(), owned:new Set(), attributes:new Map(), classes:new Map(), classless:new Set(), moved:new Map(),
             rows:new WeakMap(), keyboard:new WeakSet(), dialogs:new Map(), panelIndex:0, pending:new Set(), frame:0 };
         classToggle(document.documentElement, 'ncm-enabled');
         const style = own(element('style')); style.textContent = css + improvements;
@@ -2253,6 +2283,7 @@
             if (record.before === null) node.removeAttribute(name); else node.setAttribute(name, record.before);
         }
         for (const [node, classes] of old.classes) for (const [name, before] of classes) node.classList.toggle(name, before);
+        for (const node of old.classless) if (node.getAttribute('class') === '') node.removeAttribute('class');
         session = null;
     }
 

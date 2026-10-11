@@ -23,9 +23,11 @@ A parancsfájl automatikus módban legfeljebb 760 CSS-képpont szélességű, el
 - kibontáskor sem ismétli meg a dátumot és a méretet külön nagy blokkokban, és elrejti a külön letöltésszám-mezőt;
 - külön kibontás- és részletekgombot, valamint szöveges állapotjelzéseket ad a torrentekhez;
 - mobilon elrejti az aNi kiemelőt, és nem írja ki a rutinszerű „Új” / „Ellenőrzött” feliratokat; asztalon az aNi megjelenése változatlan;
+- az aNi torrentelrejtő ikon helyén mobilon kattintható IMDb-pontszámot jelenít meg, ha van értékelés;
 - mobilos rendezést és egyszerű előző/következő lapozót biztosít a lista felett és alatt;
 - nagyobb érintési felületeket ad a gomboknak, lapozóknak és űrlapmezőknek;
 - mobilra igazítja a torrent részleteit, a hozzászólásokat és a könyvjelzőkezelőt;
+- mobilon elrejti a hozzászólások avatárjait, így a szöveg teljes szélességben olvasható;
 - billentyűzettel is használhatóvá tesz több vezérlőt, és kiegészítő akadálymentesítési címkéket ad hozzá;
 - összecsukható fióksávot és közvetlen könyvjelző-elérést biztosít;
 - kezeli a párbeszédablakok fókuszát, a Tab billentyűt, az Escape bezárást és a háttér görgetésének zárolását;
