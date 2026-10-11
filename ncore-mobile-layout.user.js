@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         nCore mobilnézet
 // @namespace    local.ncore.mobile
-// @version      1.4.0
+// @version      1.4.1
 // @description  Érintésbarát mobilfelület, változatlan asztali nézettel; nCore aNi mellett is használható.
 // @homepageURL  https://github.com/danzig666/ncore-mobile-layout
 // @supportURL   https://github.com/danzig666/ncore-mobile-layout/issues
@@ -1796,6 +1796,12 @@
     .generic_dialog .generic_dialog_popup { min-height: 0; align-items: flex-start; padding-top: 20px; }
     .ncm-dialog-close { display: flex; margin: 0 0 8px auto; }
     .ncm-dialog-locked { overflow: hidden !important; }
+    .generic_dialog select.ncm-bookmark-select { display: none !important; }
+    .ncm-bookmark-categories { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    .ncm-bookmark-category { min-width: 44px; min-height: 44px; max-width: 100%; padding: 8px 12px; border: 1px solid var(--ncm-border); border-radius: 6px; background: var(--ncm-dark); color: var(--ncm-text); font: inherit; overflow-wrap: anywhere; cursor: pointer; }
+    .ncm-bookmark-category[aria-pressed="true"] { border-color: var(--ncm-accent); box-shadow: inset 0 0 0 2px var(--ncm-accent); }
+    .ncm-bookmark-category[aria-pressed="true"]::before { content: '✓ '; }
+    .ncm-bookmark-category:disabled { opacity: .5; cursor: default; }
 }
 `;
 
@@ -2206,6 +2212,46 @@
         return [...dialog.querySelectorAll('a[href],button,input:not([type="hidden"]),select,textarea,[tabindex]')]
             .filter(e => !e.disabled && e.tabIndex >= 0 && e.getClientRects().length);
     }
+    function enhanceBookmarkCategories(dialog) {
+        for (const select of dialog.querySelectorAll('select#bookmark_groupsel')) {
+            if (select.multiple) continue;
+            let state = session.bookmarkCategories.get(select);
+            if (!state) {
+                const group = own(element('div', 'ncm-bookmark-categories'));
+                group.setAttribute('role', 'group'); group.setAttribute('aria-label', 'Könyvjelző kategóriája');
+                select.after(group); classToggle(select, 'ncm-bookmark-select');
+                state = {group, signature:null, choices:[]}; session.bookmarkCategories.set(select, state);
+                listen(select, 'change', () => enhanceBookmarkCategories(dialog));
+                listen(select, 'input', () => enhanceBookmarkCategories(dialog));
+            }
+            const options = [...select.options];
+            const signature = JSON.stringify(options.map(option => [option.value, option.text, option.hidden,
+                option.disabled || option.parentElement.disabled, option.parentElement.hidden]));
+            if (signature !== state.signature) {
+                state.signature = signature; state.group.replaceChildren(); state.choices = [];
+                for (const option of options) {
+                    if (option.hidden || option.parentElement.hidden) continue;
+                    const choice = button(option.text, 'ncm-bookmark-category');
+                    state.group.appendChild(choice); state.choices.push({option, choice});
+                    listen(choice, 'click', () => {
+                        if (!option.isConnected || select.disabled || option.disabled || option.parentElement.disabled) return;
+                        if (!option.selected) {
+                            select.selectedIndex = [...select.options].indexOf(option);
+                            select.dispatchEvent(new Event('input', {bubbles:true}));
+                            select.dispatchEvent(new Event('change', {bubbles:true}));
+                        }
+                        enhanceBookmarkCategories(dialog);
+                    });
+                }
+            }
+            for (const {option, choice} of state.choices) {
+                const pressed = String(option.selected);
+                if (choice.getAttribute('aria-pressed') !== pressed) choice.setAttribute('aria-pressed', pressed);
+                choice.disabled = select.disabled || option.disabled || !!option.parentElement.disabled;
+            }
+        }
+    }
+
     function updateDialogs() {
         const visible = [...document.querySelectorAll('.generic_dialog')].filter(e => e.isConnected && !e.hidden && getComputedStyle(e).display !== 'none');
         for (const [dialog, state] of session.dialogs) {
@@ -2215,6 +2261,7 @@
             }
         }
         for (const dialog of visible) {
+            enhanceBookmarkCategories(dialog);
             let state = session.dialogs.get(dialog);
             if (!state) {
                 state = {open:false, returnFocus:null}; session.dialogs.set(dialog, state);
@@ -2235,7 +2282,7 @@
             }
             if (!state.open) {
                 state.open = true; state.returnFocus = document.activeElement;
-                const target = dialog.querySelector('input:not([type="hidden"]):not([type="button"]):not([type="submit"]),select,textarea') || focusables(dialog)[0] || dialog;
+                const target = focusables(dialog).find(e => e.matches('input:not([type="button"]):not([type="submit"]),select,textarea')) || focusables(dialog)[0] || dialog;
                 target.focus({preventScroll:true}); target.scrollIntoView({block:'nearest'});
             }
         }
@@ -2263,7 +2310,7 @@
     function activate() {
         if (session || !document.body) return;
         session = { controller:new AbortController(), owned:new Set(), attributes:new Map(), classes:new Map(), classless:new Set(), moved:new Map(),
-            rows:new WeakMap(), keyboard:new WeakSet(), dialogs:new Map(), panelIndex:0, pending:new Set(), frame:0 };
+            rows:new WeakMap(), keyboard:new WeakSet(), bookmarkCategories:new WeakMap(), dialogs:new Map(), panelIndex:0, pending:new Set(), frame:0 };
         classToggle(document.documentElement, 'ncm-enabled');
         const style = own(element('style')); style.textContent = css + improvements;
         (document.head || document.documentElement).appendChild(style);
@@ -2278,7 +2325,7 @@
         session.observer = new MutationObserver(mutations => {
             if (!session) return;
             for (const mutation of mutations) {
-                if (mutation.type === 'attributes' && !mutation.target.matches('.torrent_lenyilo,.torrent_lenyilo2,.generic_dialog,.siterank a')) continue;
+                if (mutation.type === 'attributes' && !mutation.target.matches('.torrent_lenyilo,.torrent_lenyilo2,.generic_dialog,.siterank a,#bookmark_groupsel,#bookmark_groupsel option,#bookmark_groupsel optgroup')) continue;
                 session.pending.add(mutation.target instanceof Element ? mutation.target : mutation.target.parentElement);
                 for (const node of mutation.addedNodes || []) if (node instanceof Element) session.pending.add(node);
             }
@@ -2289,7 +2336,7 @@
                 updateDialogs(); session.updateFilters?.();
             });
         });
-        session.observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden','class']});
+        session.observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden','class','disabled','selected','label','value']});
     }
 
     function deactivate() {

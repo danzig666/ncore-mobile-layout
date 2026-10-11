@@ -32,6 +32,7 @@ A parancsfájl automatikus módban legfeljebb 760 CSS-képpont szélességű, el
 - billentyűzettel is használhatóvá tesz több vezérlőt, és kiegészítő akadálymentesítési címkéket ad hozzá;
 - összecsukható fióksávot és közvetlen könyvjelző-elérést biztosít;
 - kezeli a párbeszédablakok fókuszát, a Tab billentyűt, az Escape bezárást és a háttér görgetésének zárolását;
+- a könyvjelző hozzáadásakor a kategóriákat mobilon közvetlenül kattintható gombokként mutatja; a kiválasztott kategóriát pipa jelzi, a mentés az eredeti gombbal történik;
 - mobilon a fejléc üres logóját a torrentlistára mutató hivatkozássá alakítja.
 
 Asztali, egérrel vezérelt nézetben automatikus módban nem módosítja az oldal stílusát vagy DOM-ját, akkor sem, ha az oldalsáv vagy a nagyítás miatt keskeny az ablak. 760 CSS-képpontnál szélesebb nézetben a mobilmód mindig kikapcsol. Mobilból asztali nézetre váltáskor eltávolítja a hozzáadott elemeket, és visszaállítja az eredeti vezérlők helyét és attribútumait, a beírt értékek megtartásával.
