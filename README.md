@@ -19,8 +19,10 @@ A parancsfájl automatikus módban legfeljebb 760 CSS-képpont szélességű, el
 - reszponzívvá teszi az oldal fő tartalmi elemeit;
 - lenyitható, érintésbarát főmenüt hoz létre;
 - változatlanul elérhető keresést és külön nyitható szűrőpanelt hoz létre, a kiválasztott feltételek összefoglalásával;
-- olvasható torrentkártyákat jelenít meg, mindig látható mérettel, seed/leech számmal és kategóriával;
+- olvasható torrentkártyákat jelenít meg, mindig látható mérettel, seed/leech számmal, kategóriával és feltöltési dátummal/idővel; az időbélyeg a meglévő gombsorba kerül, további sor nélkül;
+- kibontáskor sem ismétli meg a dátumot és a méretet külön nagy blokkokban, és elrejti a külön letöltésszám-mezőt;
 - külön kibontás- és részletekgombot, valamint szöveges állapotjelzéseket ad a torrentekhez;
+- mobilon elrejti az aNi kiemelőt, és nem írja ki a rutinszerű „Új” / „Ellenőrzött” feliratokat; asztalon az aNi megjelenése változatlan;
 - mobilos rendezést és egyszerű előző/következő lapozót biztosít a lista felett és alatt;
 - nagyobb érintési felületeket ad a gomboknak, lapozóknak és űrlapmezőknek;
 - mobilra igazítja a torrent részleteit, a hozzászólásokat és a könyvjelzőkezelőt;

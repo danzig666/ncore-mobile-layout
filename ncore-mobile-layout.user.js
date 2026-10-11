@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         nCore mobilnézet
 // @namespace    local.ncore.mobile
-// @version      1.3.0
+// @version      1.3.1
 // @description  Érintésbarát mobilfelület, változatlan asztali nézettel; nCore aNi mellett is használható.
 // @homepageURL  https://github.com/danzig666/ncore-mobile-layout
 // @supportURL   https://github.com/danzig666/ncore-mobile-layout/issues
@@ -1749,29 +1749,34 @@
     .ncm-status-badges span { padding: 3px 6px; background: var(--ncm-dark); border-radius: 4px; font-size: 12px; }
     .box_torrent .torrent_new, .box_torrent .torrent_gold, .box_torrent .torrent_hidden,
     .box_torrent .torrent_ok, .box_torrent .torrent_unchecked, .box_torrent .torrent_err { display: none !important; }
-    .ncm-row-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 10px; }
+    .ncm-row-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 74px auto; align-items: center; gap: 4px; padding: 0 10px 10px; }
+    .ncm-row-actions .ncm-row-toggle, .ncm-row-actions .ncm-details-link { min-width: 0; padding: 8px 4px; font-size: 12px; }
+    .ncm-uploaded { display: block; font-size: 11px; line-height: 1.4; text-align: center; white-space: nowrap; color: var(--ncm-muted); font-variant-numeric: tabular-nums; }
+    .ncm-uploaded > span { display: block; }
     .box_torrent .torrent_konyvjelzo, .box_torrent .torrent_konyvjelzo2 {
         position: static !important; min-width: 44px; margin-left: auto !important; flex: 0 0 44px;
     }
-    .box_torrent:not(.ncm-expanded) .box_feltoltve2, .box_torrent:not(.ncm-expanded) .box_meret2,
+    .box_torrent .box_feltoltve2, .box_torrent .box_meret2, .box_torrent .box_d2,
+    .box_torrent.ncm-expanded .box_feltoltve2, .box_torrent.ncm-expanded .box_meret2, .box_torrent.ncm-expanded .box_d2,
+    .box_torrent .users_box_sepa, .box_torrent .users_box_sepa2,
     .box_torrent .box_s2, .box_torrent .box_l2,
     .box_torrent.ncm-expanded .box_s2, .box_torrent.ncm-expanded .box_l2 { display: none !important; }
-    .box_torrent.ncm-expanded .box_feltoltve2, .box_torrent.ncm-expanded .box_meret2,
-    .box_torrent.ncm-expanded .box_d2, .box_torrent.ncm-expanded .box_feltolto2 {
-        display: inline-block !important; position: static; width: 50% !important; vertical-align: top;
+    .box_torrent.ncm-expanded .box_feltolto2 {
+        display: block !important; position: static; width: 100% !important;
         min-height: 0; padding: 6px 10px !important; font-size: 12px;
     }
     .box_torrent .box_feltoltve2::before, .box_torrent .box_meret2::before,
     .box_torrent .box_d2::before, .box_torrent .box_feltolto2::before { font-size: 11px; }
     /* Optional aNi wrappers; native rows do not depend on these selectors. */
-    .box_torrent .ani-box-name { display: flex !important; flex-wrap: wrap; gap: 6px; width: 100% !important; height: auto !important; }
-    .box_torrent .ani-torrent-name { order: -1; flex: 1 1 100%; width: 100% !important; min-width: 0 !important; white-space: normal !important; overflow: visible !important; }
-    .box_torrent .ani-torrent-icons { display: flex; flex-wrap: wrap; gap: 6px; width: auto !important; height: auto !important; }
+    .box_torrent .ani-box-name { display: grid !important; grid-template-columns: minmax(0,1fr) 44px; gap: 6px; width: 100% !important; height: auto !important; }
+    .box_torrent .ani-torrent-name { grid-column: 1; grid-row: 1; width: 100% !important; min-width: 0 !important; white-space: normal !important; overflow: visible !important; }
+    .box_torrent .ani-torrent-icons { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: auto !important; height: auto !important; }
     .box_torrent .ani-box-bookmark:empty, .box_torrent .ani-torrent-icons:empty { display: none; }
-    .box_torrent .ani-torrent-hide, .box_torrent .ani-torrent-highlighter {
+    .box_torrent .ani-torrent-hide {
         display: inline-flex; position: static !important; align-items: center; justify-content: center;
         min-width: 44px; min-height: 44px; margin: 0 !important; cursor: pointer;
     }
+    .box_torrent .ani-torrent-highlighter { display: none !important; }
     .box_torrent .ani-torrent-hide .torrent-hide { padding: 12px; }
     .generic_dialog { padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
     .generic_dialog .generic_dialog_popup { min-height: 0; align-items: flex-start; padding-top: 20px; }
@@ -2055,14 +2060,29 @@
             const toggle = button('Kibontás', 'ncm-row-toggle');
             toggle.setAttribute('aria-expanded', 'false');
             const details = element('a', 'ncm-details-link', 'Részletek'); details.href = title.href;
-            actions.append(toggle, details); name.after(meta, badges, actions);
-            state = {meta, badges, actions, toggle, title, metaKey: '', statusKey: ''}; session.rows.set(row, state);
+            const uploaded = element('time', 'ncm-uploaded');
+            actions.append(toggle, details, uploaded); name.after(meta, badges, actions);
+            state = {meta, badges, actions, toggle, title, uploaded, uploadedKey: '', metaKey: '', statusKey: ''}; session.rows.set(row, state);
             listen(toggle, 'click', () => title.click());
             // Retain the site's title expansion handler and all original aNi controls.
         }
         const bookmark = row.querySelector('.torrent_konyvjelzo, .torrent_konyvjelzo2');
         if (bookmark && bookmark.parentElement !== state.actions) move(bookmark, state.actions);
         keyboard(bookmark, 'Könyvjelző hozzáadása');
+        const uploadedNode = row.querySelector('.box_feltoltve2');
+        const uploadedText = [...(uploadedNode?.childNodes || [])].map(node => node.nodeName === 'BR' ? ' ' : node.textContent).join('').trim().replace(/\s+/g, ' ');
+        if (state.uploadedKey !== uploadedText) {
+            state.uploadedKey = uploadedText; state.uploaded.replaceChildren();
+            const match = uploadedText.match(/(\d{4}-\d{2}-\d{2})\s*(\d{2}:\d{2}(?::\d{2})?)/);
+            if (match) {
+                state.uploaded.dateTime = `${match[1]}T${match[2]}`;
+                state.uploaded.append(element('span', '', match[1]), element('span', '', match[2]));
+            } else {
+                state.uploaded.removeAttribute('datetime'); state.uploaded.textContent = uploadedText;
+            }
+            state.uploaded.title = `Feltöltve: ${uploadedText}`;
+            state.uploaded.setAttribute('aria-label', `Feltöltve: ${uploadedText}`);
+        }
         const category = row.querySelector('.categ_link')?.getAttribute('alt') || '';
         const release = title.getAttribute('title') || title.textContent;
         const resolution = release.match(/(?:^|[._\s-])(2160p|1080[pi]|720p|480p)(?:[._\s-]|$)/i)?.[1] || '';
@@ -2075,7 +2095,7 @@
             state.metaKey = metaKey; state.meta.replaceChildren();
             for (const text of pieces) state.meta.appendChild(element('span', text === '0 seed' ? 'ncm-zero-seed' : '', text));
         }
-        const statusNames = {torrent_new:'Új', torrent_gold:'Arany', torrent_hidden:'Rejtett', torrent_ok:'Ellenőrzött', torrent_unchecked:'Ellenőrizetlen', torrent_err:'Hibás'};
+        const statusNames = {torrent_gold:'Arany', torrent_hidden:'Rejtett', torrent_unchecked:'Ellenőrizetlen', torrent_err:'Hibás'};
         const status = Object.entries(statusNames).filter(([cls]) => row.querySelector(`.${cls}`));
         const statusKey = status.map(([cls]) => cls).join('|');
         if (state.statusKey !== statusKey) {
@@ -2086,7 +2106,6 @@
             }
         }
         state.badges.hidden = !status.length;
-        keyboard(row.querySelector('.ani-torrent-highlighter'), 'aNi kiemelés');
         keyboard(row.querySelector('.ani-torrent-hide .torrent-hide'), 'Torrent elrejtése (aNi)');
         const panel = panelForRow(row); const open = isPanelOpen(panel);
         classToggle(row, 'ncm-expanded', open);
