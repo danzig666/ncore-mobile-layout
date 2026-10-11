@@ -1,43 +1,28 @@
 // ==UserScript==
 // @name         nCore mobilnézet
 // @namespace    local.ncore.mobile
-// @version      1.2.1
-// @description  Reszponzív, érintésbarát nCore-felület, amely megőrzi az oldal eredeti torrent- és könyvjelzőfunkcióit.
+// @version      1.3.0
+// @description  Érintésbarát mobilfelület, változatlan asztali nézettel; nCore aNi mellett is használható.
 // @homepageURL  https://github.com/danzig666/ncore-mobile-layout
 // @supportURL   https://github.com/danzig666/ncore-mobile-layout/issues
 // @downloadURL  https://raw.githubusercontent.com/danzig666/ncore-mobile-layout/main/ncore-mobile-layout.user.js
 // @updateURL    https://raw.githubusercontent.com/danzig666/ncore-mobile-layout/main/ncore-mobile-layout.user.js
 // @match        https://ncore.pro/*
 // @run-at       document-start
-// @grant        GM_addStyle
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // ==/UserScript==
 
 (function () {
     'use strict';
-
     const MOBILE_BREAKPOINT = 760;
     const MOBILE_MEDIA = `(max-width: ${MOBILE_BREAKPOINT}px)`;
-
-    document.documentElement.classList.add('ncm-enabled');
-
-    function installViewport() {
-        let viewport = document.querySelector('meta[name="viewport"]');
-        if (!viewport) {
-            if (!document.head) return false;
-            viewport = document.createElement('meta');
-            viewport.name = 'viewport';
-            document.head.appendChild(viewport);
-        }
-        viewport.content = 'width=device-width, initial-scale=1, viewport-fit=cover';
-        return true;
-    }
-
-    if (!installViewport()) {
-        const headObserver = new MutationObserver(() => {
-            if (installViewport()) headObserver.disconnect();
-        });
-        headObserver.observe(document.documentElement, { childList: true, subtree: true });
-    }
+    const narrow = window.matchMedia(MOBILE_MEDIA);
+    const touch = window.matchMedia('(pointer: coarse)');
+    let mode = typeof GM_getValue === 'function' ? GM_getValue('layoutMode', 'auto') : 'auto';
+    if (!['auto', 'mobile', 'desktop'].includes(mode)) mode = 'auto';
+    let session = null;
 
     const css = String.raw`
 /* nCore mobilnézet -------------------------------------------------------- */
@@ -1696,281 +1681,584 @@
 }
 `;
 
-    if (typeof GM_addStyle === 'function') {
-        GM_addStyle(css);
-    } else {
-        const style = document.createElement('style');
-        style.textContent = css;
-        (document.head || document.documentElement).appendChild(style);
+    const improvements = String.raw`
+@media ${MOBILE_MEDIA} {
+    html.ncm-enabled { --ncm-touch: 44px; }
+    html.ncm-enabled body { padding-bottom: env(safe-area-inset-bottom); }
+    #main_all { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+    #fej_fejlec_bg { min-height: 34px; }
+    #fej_fejlec { margin: 5px auto !important; transform: scale(.8); transform-origin: center; }
+    #menu_bg { top: env(safe-area-inset-top); }
+    #infosav { min-height: 44px; padding: 4px 8px; gap: 6px; }
+    #infosav .infosav_c { width: auto !important; flex: 1; }
+    #infosav_adatok { display: none; }
+    #infosav_extra { width: auto; padding: 0 !important; }
+    #infosav_extra > div:not(.i_e_vonal):not(.ncm-primary-shortcut) { display: none !important; }
+    #infosav.ncm-account-open #infosav_adatok { display: block; }
+    #infosav.ncm-account-open #infosav_extra > div:not(.i_e_vonal) { display: block !important; }
+    .ncm-account-toggle, .ncm-row-toggle, .ncm-details-link, .ncm-dialog-close, .ncm-reset {
+        display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+        padding: 8px 12px; border: 1px solid var(--ncm-border); border-radius: 6px;
+        background: var(--ncm-dark); color: var(--ncm-text); font: inherit; cursor: pointer;
+    }
+    .ncm-owned :focus-visible, .ncm-account-toggle:focus-visible, .ncm-row-toggle:focus-visible {
+        outline: 3px solid var(--ncm-accent); outline-offset: 2px;
+    }
+    #kereses_mezo { display: block; }
+    .ncm-search-row { display: grid; grid-template-columns: minmax(0,1fr) 96px; gap: 8px; align-items: end; }
+    .ncm-search-row label { display: block; margin-bottom: 4px; }
+    .ncm-search-row #mire { width: 100% !important; min-height: 44px; }
+    .ncm-search-row .g_mehet { width: 96px !important; margin: 0 !important; }
+    .ncm-filter-summary { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; font-size: 12px; }
+    .ncm-filter-summary span { overflow-wrap: anywhere; }
+    .ncm-filter-summary .ncm-reset { margin-left: auto; }
+    #kereses_mezo > .ncm-filter-toggle { margin: 8px 0; }
+    .ncm-filter-panel[hidden], .ncm-original-search, .ncm-original-pager { display: none !important; }
+    .ncm-filter-panel { padding: 8px; border: 1px solid var(--ncm-border); border-radius: 6px; }
+    .ncm-field { display: block; margin: 6px 0 12px; }
+    .ncm-field > span { display: block; margin-bottom: 5px; }
+    .ncm-field select, .ncm-field input { width: 100% !important; }
+    #kategoriak #table_torrcat, #kategoriak [id$="_resz"] table, #kategoriak [id$="_resz"] tbody { display: block !important; width: 100% !important; }
+    #kategoriak #table_torrcat tr, #kategoriak [id$="_resz"] tr { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; }
+    #kategoriak td[hidden] { display: none !important; }
+    #kategoriak .ncm-check-cell { width: auto !important; padding: 0 !important; min-width: 0; }
+    .ncm-check-label { display: flex; min-height: 44px; align-items: center; gap: 3px; padding: 4px; overflow-wrap: anywhere; cursor: pointer; }
+    #kategoriak #cimkek_lista { max-width: 100%; }
+    .ncm-browse-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; }
+    .ncm-browse-controls label { flex: 1; min-width: 100px; }
+    .ncm-browse-controls select { width: 100%; }
+    .ncm-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin: 8px 0; }
+    .ncm-pager a, .ncm-pager > span { display: inline-flex; min-height: 44px; align-items: center; padding: 8px; }
+    .ncm-pager a { border: 1px solid var(--ncm-border); border-radius: 6px; background: var(--ncm-dark); }
+    .ncm-pager details { flex-basis: 100%; }
+    .ncm-pager summary { min-height: 44px; padding: 10px; cursor: pointer; text-align: center; }
+    .ncm-pager details a { margin: 3px; }
+    .box_torrent, .box_torrent.ncm-expanded { display: block !important; margin-bottom: 8px; border: 1px solid var(--ncm-border) !important; border-radius: 8px; }
+    .box_torrent .box_alap_img, .box_torrent.ncm-expanded .box_alap_img { display: none !important; }
+    .box_torrent .box_nagy, .box_torrent .box_nagy2 { display: block !important; width: 100% !important; }
+    .box_torrent .box_nev2 { padding: 10px !important; height: auto !important; min-height: 0; border: 0; }
+    .box_torrent .torrent_txt, .box_torrent .torrent_txt2 { display: block !important; width: 100% !important; }
+    .box_torrent .torrent_txt > a, .box_torrent .torrent_txt2 > a { font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+    .torrent_txt_also { padding: 0 !important; margin-top: 5px !important; height: auto !important; overflow: visible; white-space: normal; }
+    .torrent_txt_also .siterank, .torrent_txt_also .siterank > span { display: flex; flex-wrap: wrap; gap: 4px; overflow: visible; white-space: normal; font-size: 12px; }
+    .box_torrent .ncm-category-label { display: none !important; }
+    .ncm-compact-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0 10px 8px; font-size: 12px; line-height: 1.5; }
+    .ncm-compact-meta span { overflow-wrap: anywhere; }
+    .ncm-compact-meta .ncm-zero-seed { color: #ffe09d; }
+    .ncm-status-badges { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 10px 8px; }
+    .ncm-status-badges span { padding: 3px 6px; background: var(--ncm-dark); border-radius: 4px; font-size: 12px; }
+    .box_torrent .torrent_new, .box_torrent .torrent_gold, .box_torrent .torrent_hidden,
+    .box_torrent .torrent_ok, .box_torrent .torrent_unchecked, .box_torrent .torrent_err { display: none !important; }
+    .ncm-row-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 10px 10px; }
+    .box_torrent .torrent_konyvjelzo, .box_torrent .torrent_konyvjelzo2 {
+        position: static !important; min-width: 44px; margin-left: auto !important; flex: 0 0 44px;
+    }
+    .box_torrent:not(.ncm-expanded) .box_feltoltve2, .box_torrent:not(.ncm-expanded) .box_meret2,
+    .box_torrent .box_s2, .box_torrent .box_l2,
+    .box_torrent.ncm-expanded .box_s2, .box_torrent.ncm-expanded .box_l2 { display: none !important; }
+    .box_torrent.ncm-expanded .box_feltoltve2, .box_torrent.ncm-expanded .box_meret2,
+    .box_torrent.ncm-expanded .box_d2, .box_torrent.ncm-expanded .box_feltolto2 {
+        display: inline-block !important; position: static; width: 50% !important; vertical-align: top;
+        min-height: 0; padding: 6px 10px !important; font-size: 12px;
+    }
+    .box_torrent .box_feltoltve2::before, .box_torrent .box_meret2::before,
+    .box_torrent .box_d2::before, .box_torrent .box_feltolto2::before { font-size: 11px; }
+    /* Optional aNi wrappers; native rows do not depend on these selectors. */
+    .box_torrent .ani-box-name { display: flex !important; flex-wrap: wrap; gap: 6px; width: 100% !important; height: auto !important; }
+    .box_torrent .ani-torrent-name { order: -1; flex: 1 1 100%; width: 100% !important; min-width: 0 !important; white-space: normal !important; overflow: visible !important; }
+    .box_torrent .ani-torrent-icons { display: flex; flex-wrap: wrap; gap: 6px; width: auto !important; height: auto !important; }
+    .box_torrent .ani-box-bookmark:empty, .box_torrent .ani-torrent-icons:empty { display: none; }
+    .box_torrent .ani-torrent-hide, .box_torrent .ani-torrent-highlighter {
+        display: inline-flex; position: static !important; align-items: center; justify-content: center;
+        min-width: 44px; min-height: 44px; margin: 0 !important; cursor: pointer;
+    }
+    .box_torrent .ani-torrent-hide .torrent-hide { padding: 12px; }
+    .generic_dialog { padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
+    .generic_dialog .generic_dialog_popup { min-height: 0; align-items: flex-start; padding-top: 20px; }
+    .ncm-dialog-close { display: flex; margin: 0 0 8px auto; }
+    .ncm-dialog-locked { overflow: hidden !important; }
+}
+`;
+
+    function element(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
     }
 
-    function addKeyboardActivation(element) {
-        if (!element || element.dataset.ncmKeyboard === 'true') return;
-        element.dataset.ncmKeyboard = 'true';
-        if (!element.hasAttribute('tabindex')) element.tabIndex = 0;
-        if (!element.hasAttribute('role')) element.setAttribute('role', 'button');
-        element.addEventListener('keydown', (event) => {
+    // Every modification to an existing node has an inverse. Never clone site controls.
+    function setAttribute(node, name, value) {
+        if (!node) return;
+        let attributes = session.attributes.get(node);
+        if (!attributes) session.attributes.set(node, attributes = new Map());
+        if (!attributes.has(name)) attributes.set(name, { before: node.getAttribute(name), after: null });
+        const record = attributes.get(name);
+        record.after = value === null ? null : String(value);
+        if (node.getAttribute(name) === record.after) return;
+        if (record.after === null) node.removeAttribute(name);
+        else node.setAttribute(name, record.after);
+    }
+
+    function classToggle(node, name, enabled = true) {
+        if (!node) return;
+        let classes = session.classes.get(node);
+        if (!classes) session.classes.set(node, classes = new Map());
+        if (!classes.has(name)) classes.set(name, node.classList.contains(name));
+        node.classList.toggle(name, enabled);
+    }
+
+    function own(node) { session.owned.add(node); return node; }
+    function listen(node, event, callback) {
+        node.addEventListener(event, callback, { signal: session.controller.signal });
+    }
+    function move(node, destination) {
+        if (!node || !node.parentNode) return;
+        if (!session.moved.has(node)) {
+            const marker = document.createComment('ncm original position');
+            node.before(marker);
+            session.moved.set(node, marker);
+        }
+        destination.appendChild(node);
+    }
+    function button(text, className) {
+        const node = own(element('button', className, text));
+        node.type = 'button';
+        return node;
+    }
+    function keyboard(node, label) {
+        if (!node || session.keyboard.has(node)) return;
+        session.keyboard.add(node);
+        if (label) setAttribute(node, 'aria-label', label);
+        if (!node.hasAttribute('tabindex')) setAttribute(node, 'tabindex', '0');
+        if (!node.hasAttribute('role')) setAttribute(node, 'role', 'button');
+        listen(node, 'keydown', event => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
-            event.preventDefault();
-            element.click();
+            event.preventDefault(); node.click();
         });
     }
 
-    function elementsIn(root, selector) {
-        const result = [];
-        if (root instanceof Element && root.matches(selector)) result.push(root);
-        if (root.querySelectorAll) result.push(...root.querySelectorAll(selector));
-        return result;
-    }
-
-    function enhanceTorrentRows(root) {
-        for (const row of elementsIn(root, '.box_torrent')) {
-            row.querySelector('.ncm-compact-meta')?.remove();
-            if (row.dataset.ncmCategoryLabel === 'true') continue;
-
-            const torrentText = row.querySelector('.torrent_txt, .torrent_txt2');
-            const categoryImage = row.querySelector('.categ_link');
-            const category = categoryImage?.getAttribute('alt')?.trim();
-            if (!torrentText || !category) continue;
-
-            const categoryLabel = document.createElement('span');
-            categoryLabel.className = 'ncm-category-label';
-            categoryLabel.textContent = category;
-            categoryLabel.setAttribute('aria-label', `Kategória: ${category}`);
-            torrentText.insertBefore(categoryLabel, torrentText.firstChild);
-            row.dataset.ncmCategoryLabel = 'true';
+    function initHeader() {
+        const menu = document.getElementById('menu_all');
+        const center = document.getElementById('menu_center');
+        if (menu && center) {
+            const toggle = button('Menü', 'ncm-menu-toggle');
+            toggle.id = 'ncm-menu-toggle';
+            toggle.setAttribute('aria-controls', 'menu_center');
+            toggle.setAttribute('aria-expanded', 'false');
+            menu.insertBefore(toggle, center);
+            const close = () => {
+                classToggle(document.documentElement, 'ncm-nav-open', false);
+                toggle.setAttribute('aria-expanded', 'false');
+            };
+            listen(toggle, 'click', () => {
+                const open = !document.documentElement.classList.contains('ncm-nav-open');
+                classToggle(document.documentElement, 'ncm-nav-open', open);
+                toggle.setAttribute('aria-expanded', String(open));
+            });
+            listen(center, 'click', event => { if (event.target.closest('a')) close(); });
+            listen(document, 'keydown', event => { if (event.key === 'Escape') close(); });
         }
-    }
-
-    function enhanceDynamicContent(root) {
-        enhanceTorrentRows(root);
-
-        for (const button of elementsIn(root, '.torrent_konyvjelzo, .torrent_konyvjelzo2')) {
-            if (!button.hasAttribute('aria-label')) {
-                button.setAttribute('aria-label', 'Könyvjelző hozzáadása');
-                button.setAttribute('title', 'Könyvjelző hozzáadása');
-            }
-            addKeyboardActivation(button);
-        }
-
-        for (const editButton of elementsIn(root, '.bookmark_szerk')) {
-            if (!editButton.hasAttribute('aria-label')) {
-                editButton.setAttribute('aria-label', 'Könyvjelző nevének szerkesztése');
-                editButton.setAttribute('title', 'Könyvjelző nevének szerkesztése');
-            }
-            addKeyboardActivation(editButton);
-        }
-
-        for (const popup of elementsIn(root, '.generic_dialog')) {
-            popup.setAttribute('role', 'dialog');
-            popup.setAttribute('aria-modal', 'true');
-        }
-
-        for (const select of elementsIn(root, '#bookmark_groupsel')) {
-            if (!select.hasAttribute('aria-label')) select.setAttribute('aria-label', 'Könyvjelző csoport');
-        }
-
-        for (const submit of elementsIn(root, 'input[type="image"].g_mehet')) {
-            if (!submit.hasAttribute('aria-label')) submit.setAttribute('aria-label', 'Mentés');
-            if (!submit.hasAttribute('title')) submit.setAttribute('title', 'Mentés');
-        }
-
-        for (const attachment of elementsIn(root, '.torrent_kep_ico2 .fancy_groups')) {
-            if (!attachment.hasAttribute('aria-label')) attachment.setAttribute('aria-label', 'Mellékelt kép megnyitása');
-        }
-    }
-
-    function initLogoLink() {
         const logo = document.getElementById('fej_fejlec');
-        if (!logo) return;
-
-        let link = logo.querySelector('a');
-        if (!link) {
-            link = document.createElement('a');
+        if (logo && !logo.querySelector('a')) {
+            const link = own(element('a', 'ncm-logo-link'));
+            link.href = '/torrents.php'; link.setAttribute('aria-label', 'Letöltés');
             logo.appendChild(link);
         }
-        link.classList.add('ncm-logo-link');
-        link.href = '/torrents.php';
-        link.setAttribute('aria-label', 'Letöltés');
-        link.setAttribute('title', 'Letöltés');
+        const info = document.getElementById('infosav');
+        if (info) {
+            const toggle = button('Fiók', 'ncm-account-toggle');
+            toggle.setAttribute('aria-expanded', 'false');
+            const data = document.getElementById('infosav_adatok');
+            if (data) toggle.setAttribute('aria-controls', data.id);
+            info.prepend(toggle);
+            const shortcut = document.getElementById('konyvjelzo')?.parentElement;
+            classToggle(shortcut, 'ncm-primary-shortcut');
+            listen(toggle, 'click', () => {
+                const open = !info.classList.contains('ncm-account-open');
+                classToggle(info, 'ncm-account-open', open);
+                toggle.setAttribute('aria-expanded', String(open));
+            });
+        }
     }
 
-    function initNavigation() {
-        const menu = document.getElementById('menu_all');
-        const menuCenter = document.getElementById('menu_center');
-        if (!menu || !menuCenter || document.getElementById('ncm-menu-toggle')) return;
-
-        const toggle = document.createElement('button');
-        toggle.id = 'ncm-menu-toggle';
-        toggle.className = 'ncm-menu-toggle';
-        toggle.type = 'button';
-        toggle.setAttribute('aria-controls', 'menu_center');
-        toggle.setAttribute('aria-expanded', 'false');
-        toggle.textContent = 'Menü';
-        menu.insertBefore(toggle, menuCenter);
-
-        toggle.addEventListener('click', () => {
-            const isOpen = document.documentElement.classList.toggle('ncm-nav-open');
-            toggle.setAttribute('aria-expanded', String(isOpen));
-        });
-
-        menuCenter.addEventListener('click', (event) => {
-            if (!event.target.closest('a')) return;
-            document.documentElement.classList.remove('ncm-nav-open');
-            toggle.setAttribute('aria-expanded', 'false');
-        });
-
-        const media = window.matchMedia(MOBILE_MEDIA);
-        const closeWhenDesktop = (event) => {
-            if (event.matches) return;
-            document.documentElement.classList.remove('ncm-nav-open');
-            toggle.setAttribute('aria-expanded', 'false');
-        };
-        if (typeof media.addEventListener === 'function') media.addEventListener('change', closeWhenDesktop);
-        else if (typeof media.addListener === 'function') media.addListener(closeWhenDesktop);
+    function field(control, label, panel) {
+        if (!control) return;
+        const wrapper = own(element('label', 'ncm-field'));
+        wrapper.appendChild(element('span', '', label));
+        move(control, wrapper); panel.appendChild(wrapper);
+        setAttribute(control, 'aria-label', label);
     }
 
-    function initTorrentFilters() {
+    function initFilters() {
+        const form = document.getElementById('kereses_mezo');
         const filters = document.getElementById('kategoriak');
-        if (!filters || document.getElementById('ncm-filter-toggle')) return;
-
-        const searchTable = filters.querySelector('#keresoresz');
-        if (searchTable?.parentElement) searchTable.parentElement.classList.add('ncm-search-container');
-
-        const toggle = document.createElement('button');
+        const input = document.getElementById('mire');
+        const submit = form?.querySelector('input.g_mehet, button[type="submit"]');
+        if (!form || !filters || !input || !submit) return;
+        const originalChildren = [...form.children];
+        const row = own(element('div', 'ncm-search-row'));
+        const search = own(element('label'));
+        search.appendChild(element('span', '', 'Keresés'));
+        move(input, search); row.appendChild(search); move(submit, row);
+        setAttribute(input, 'aria-label', 'Keresés');
+        setAttribute(input, 'enterkeyhint', 'search');
+        setAttribute(submit, 'aria-label', 'Keresés');
+        setAttribute(submit, 'title', 'Keresés');
+        const panel = own(element('div', 'ncm-filter-panel'));
+        panel.id = 'ncm-filter-panel'; panel.hidden = true;
+        const toggle = button('Szűrők', 'ncm-filter-toggle');
         toggle.id = 'ncm-filter-toggle';
-        toggle.className = 'ncm-filter-toggle';
-        toggle.type = 'button';
-        toggle.setAttribute('aria-controls', 'kategoriak');
+        toggle.setAttribute('aria-controls', panel.id); toggle.setAttribute('aria-expanded', 'false');
+        const summary = own(element('div', 'ncm-filter-summary'));
+        summary.setAttribute('aria-live', 'polite');
+        const summaryText = element('span'); summary.appendChild(summaryText);
+        const resetSource = [...form.querySelectorAll('a')].find(a => /feltételek törlése/i.test(a.textContent));
+        if (resetSource) {
+            const reset = element('a', 'ncm-reset', 'Törlés');
+            reset.href = resetSource.href; reset.setAttribute('aria-label', 'Keresési feltételek törlése');
+            summary.appendChild(reset);
+        }
+        field(form.querySelector('select[name="miben"]'), 'Keresés helye', panel);
+        field(form.querySelector('select[name="tipus"]'), 'Típus', panel);
+        field(form.querySelector('input[name="tags"]'), 'Címkék', panel);
+        const tagLink = form.querySelector('#cimke_text')?.closest('a');
+        if (tagLink) move(tagLink, panel);
+        classToggle(form.querySelector('#keresoresz'), 'ncm-original-search');
+        for (const child of originalChildren) move(child, panel);
+        form.append(row, summary, toggle, panel);
+        // The panel itself controls visibility, independent of the native category toggles.
+        classToggle(filters, 'ncm-open');
+        let checkIndex = 0;
+        for (const checkbox of panel.querySelectorAll('input[type="checkbox"]')) {
+            const cell = checkbox.closest('td');
+            const labelCell = cell?.nextElementSibling;
+            const text = labelCell?.textContent.trim();
+            if (!cell || !labelCell || !text) continue;
+            const label = own(element('label', 'ncm-check-label'));
+            if (!checkbox.id) setAttribute(checkbox, 'id', `ncm-category-${++checkIndex}`);
+            setAttribute(checkbox, 'aria-label', text);
+            label.htmlFor = checkbox.id;
+            // Retain the original category nodes for exact desktop restoration.
+            move(checkbox, label);
+            label.appendChild(element('span', '', text));
+            for (const original of [...labelCell.childNodes]) {
+                if (original.nodeType === Node.ELEMENT_NODE) setAttribute(original, 'hidden', '');
+                else if (original.nodeType === Node.TEXT_NODE && original.textContent.trim()) {
+                    const span = own(element('span')); original.before(span); move(original, span); span.hidden = true;
+                }
+            }
+            labelCell.appendChild(label);
+            classToggle(labelCell, 'ncm-check-cell'); setAttribute(cell, 'hidden', '');
+        }
+        const update = () => {
+            const parts = [];
+            const scope = form.querySelector('select[name="miben"]');
+            const type = form.querySelector('select[name="tipus"]');
+            if (input.value.trim()) parts.push(`„${input.value.trim()}”`);
+            if (scope) parts.push(scope.selectedOptions[0]?.textContent.trim());
+            if (type) parts.push(type.selectedOptions[0]?.textContent.trim());
+            const tags = form.querySelector('input[name="tags"]')?.value.trim();
+            if (tags) parts.push(`Címkék: ${tags}`);
+            const checked = [...panel.querySelectorAll('input[type="checkbox"]:checked')];
+            if (checked.length) parts.push(checked.map(e => e.getAttribute('aria-label') || e.value).join(', '));
+            const text = parts.filter(Boolean).join(' · ');
+            if (summaryText.textContent !== text) summaryText.textContent = text;
+            toggle.textContent = panel.hidden ? `Szűrők${checked.length ? ` (${checked.length})` : ''}` : 'Szűrők elrejtése';
+        };
+        listen(toggle, 'click', () => { panel.hidden = !panel.hidden; toggle.setAttribute('aria-expanded', String(!panel.hidden)); update(); });
+        listen(form, 'input', update); listen(form, 'change', update); listen(form, 'reset', () => queueMicrotask(update));
+        session.updateFilters = update; update();
+    }
 
-        const hasSelectedFilter = Boolean(filters.querySelector('input[type="checkbox"]:checked'));
-        filters.classList.toggle('ncm-open', hasSelectedFilter);
-        toggle.setAttribute('aria-expanded', String(hasSelectedFilter));
-        toggle.textContent = hasSelectedFilter ? 'Szűrők elrejtése' : 'További szűrők';
-
-        const form = filters.querySelector('#kereses_mezo');
-        if (form) form.appendChild(toggle);
-        else filters.parentNode.insertBefore(toggle, filters);
-        toggle.addEventListener('click', () => {
-            const isOpen = filters.classList.toggle('ncm-open');
-            toggle.setAttribute('aria-expanded', String(isOpen));
-            toggle.textContent = isOpen ? 'Szűrők elrejtése' : 'További szűrők';
+    function initSorting() {
+        const headings = document.querySelector('.box_alcimek_all, .box_alcimek_all_mini');
+        if (!headings) return;
+        const links = [...headings.querySelectorAll('a[href]')].filter(a => new URL(a.href).searchParams.has('miszerint'));
+        if (!links.length) return;
+        const controls = own(element('div', 'ncm-browse-controls'));
+        const sort = element('select'); sort.setAttribute('aria-label', 'Rendezés');
+        const names = {name: 'Név', ctime: 'Feltöltés ideje', size: 'Méret', times_completed: 'Letöltések', seeders: 'Seedelők', leechers: 'Letöltők'};
+        const current = new URL(location.href);
+        for (const link of links) {
+            const key = new URL(link.href).searchParams.get('miszerint');
+            if ([...sort.options].some(o => o.value === key)) continue;
+            sort.add(new Option(names[key] || link.textContent.trim(), key));
+        }
+        sort.value = current.searchParams.get('miszerint') || 'ctime';
+        const direction = element('select'); direction.setAttribute('aria-label', 'Rendezés iránya');
+        direction.add(new Option('Csökkenő', 'DESC')); direction.add(new Option('Növekvő', 'ASC'));
+        direction.value = (current.searchParams.get('hogyan') || 'DESC').toUpperCase();
+        for (const [control, text] of [[sort, 'Rendezés'], [direction, 'Sorrend']]) {
+            const label = element('label', '', text); label.appendChild(control); controls.appendChild(label);
+        }
+        const apply = button('Rendezés', 'ncm-row-toggle'); controls.appendChild(apply);
+        listen(apply, 'click', () => {
+            const source = links.find(a => new URL(a.href).searchParams.get('miszerint') === sort.value);
+            const url = new URL(source.href);
+            url.searchParams.set('hogyan', direction.value); url.searchParams.delete('oldal');
+            location.assign(url.href);
         });
+        headings.before(controls);
+    }
+
+    function initPagination() {
+        for (const original of document.querySelectorAll('#pager_top, #pager_bottom')) {
+            const links = [...original.querySelectorAll('a[href]')];
+            if (!links.length) continue;
+            const current = Math.max(1, Number(new URL(location.href).searchParams.get('oldal')) || 1);
+            const numbered = links.map(a => ({a, page: Number(new URL(a.href).searchParams.get('oldal'))})).filter(e => e.page > 0);
+            const last = numbered.find(e => /Utolsó/i.test(e.a.textContent))?.page;
+            const pager = own(element('nav', 'ncm-pager'));
+            pager.setAttribute('aria-label', original.id === 'pager_top' ? 'Felső lapozó' : 'Alsó lapozó');
+            const linkTo = (page, text) => {
+                const source = numbered.find(e => e.page === page)?.a || numbered[0]?.a;
+                if (!source) return;
+                const url = new URL(source.href); url.searchParams.set('oldal', String(page));
+                const link = element('a', '', text); link.href = url.href; pager.appendChild(link);
+            };
+            if (current > 1) linkTo(current - 1, '‹ Előző');
+            const number = element('span', '', `${current}. oldal`); number.setAttribute('aria-current', 'page'); pager.appendChild(number);
+            if ((last && current < last) || numbered.some(e => e.page > current)) linkTo(current + 1, 'Következő ›');
+            const more = element('details'); more.appendChild(element('summary', '', 'Oldalak'));
+            const seen = new Set();
+            for (const {a, page} of numbered) {
+                if (seen.has(page)) continue; seen.add(page);
+                const link = element('a', '', /Utolsó/i.test(a.textContent) ? `Utolsó (${page})` : `${page}`);
+                link.href = a.href; more.appendChild(link);
+            }
+            pager.appendChild(more); original.before(pager); classToggle(original, 'ncm-original-pager');
+        }
+    }
+
+    function panelForRow(row) {
+        let next = row.nextElementSibling;
+        for (let count = 0; next && count < 4; count++, next = next.nextElementSibling) {
+            if (next.matches('.box_torrent')) break;
+            if (next.matches('.torrent_lenyilo, .torrent_lenyilo2')) return next;
+        }
+        return null;
+    }
+    function isPanelOpen(panel) { return Boolean(panel && !panel.hidden && getComputedStyle(panel).display !== 'none'); }
+    function setText(node, text) { if (node.textContent !== text) node.textContent = text; }
+
+    function enhanceRow(row) {
+        const title = row.querySelector('.torrent_txt > a, .torrent_txt2 > a');
+        const main = row.querySelector('.box_nagy, .box_nagy2');
+        const name = row.querySelector('.box_nev2');
+        if (!title || !main || !name) return;
+        let state = session.rows.get(row);
+        if (!state || !state.meta.isConnected || state.title !== title) {
+            const meta = own(element('div', 'ncm-compact-meta'));
+            const badges = own(element('div', 'ncm-status-badges'));
+            const actions = own(element('div', 'ncm-row-actions'));
+            const toggle = button('Kibontás', 'ncm-row-toggle');
+            toggle.setAttribute('aria-expanded', 'false');
+            const details = element('a', 'ncm-details-link', 'Részletek'); details.href = title.href;
+            actions.append(toggle, details); name.after(meta, badges, actions);
+            state = {meta, badges, actions, toggle, title, metaKey: '', statusKey: ''}; session.rows.set(row, state);
+            listen(toggle, 'click', () => title.click());
+            // Retain the site's title expansion handler and all original aNi controls.
+        }
+        const bookmark = row.querySelector('.torrent_konyvjelzo, .torrent_konyvjelzo2');
+        if (bookmark && bookmark.parentElement !== state.actions) move(bookmark, state.actions);
+        keyboard(bookmark, 'Könyvjelző hozzáadása');
+        const category = row.querySelector('.categ_link')?.getAttribute('alt') || '';
+        const release = title.getAttribute('title') || title.textContent;
+        const resolution = release.match(/(?:^|[._\s-])(2160p|1080[pi]|720p|480p)(?:[._\s-]|$)/i)?.[1] || '';
+        const size = row.querySelector('.box_meret2')?.textContent.trim() || '';
+        const seeds = row.querySelector('.box_s2')?.textContent.trim();
+        const leech = row.querySelector('.box_l2')?.textContent.trim();
+        const pieces = [category, resolution, size, seeds !== undefined ? `${seeds} seed` : '', leech !== undefined ? `${leech} leech` : ''].filter(Boolean);
+        const metaKey = pieces.join('|');
+        if (state.metaKey !== metaKey) {
+            state.metaKey = metaKey; state.meta.replaceChildren();
+            for (const text of pieces) state.meta.appendChild(element('span', text === '0 seed' ? 'ncm-zero-seed' : '', text));
+        }
+        const statusNames = {torrent_new:'Új', torrent_gold:'Arany', torrent_hidden:'Rejtett', torrent_ok:'Ellenőrzött', torrent_unchecked:'Ellenőrizetlen', torrent_err:'Hibás'};
+        const status = Object.entries(statusNames).filter(([cls]) => row.querySelector(`.${cls}`));
+        const statusKey = status.map(([cls]) => cls).join('|');
+        if (state.statusKey !== statusKey) {
+            state.statusKey = statusKey; state.badges.replaceChildren();
+            for (const [cls, text] of status) {
+                const badge = element('span', '', text); badge.title = row.querySelector(`.${cls}`)?.title || text;
+                state.badges.appendChild(badge);
+            }
+        }
+        state.badges.hidden = !status.length;
+        keyboard(row.querySelector('.ani-torrent-highlighter'), 'aNi kiemelés');
+        keyboard(row.querySelector('.ani-torrent-hide .torrent-hide'), 'Torrent elrejtése (aNi)');
+        const panel = panelForRow(row); const open = isPanelOpen(panel);
+        classToggle(row, 'ncm-expanded', open);
+        state.toggle.setAttribute('aria-expanded', String(open));
+        setText(state.toggle, open ? 'Bezárás' : 'Kibontás');
+        if (panel) {
+            if (!panel.id) setAttribute(panel, 'id', `ncm-panel-${++session.panelIndex}`);
+            state.toggle.setAttribute('aria-controls', panel.id);
+        }
     }
 
     function enhanceBookmarksPage() {
         const form = document.querySelector('form[name="konyvjelzo_szerkesztes"]');
         if (!form) return;
-
-        document.body.classList.add('ncm-bookmarks-page');
+        classToggle(document.body, 'ncm-bookmarks-page');
         const table = form.querySelector('table[width="100%"], table');
-        if (!table || table.dataset.ncmEnhanced === 'true') return;
-        table.dataset.ncmEnhanced = 'true';
-        table.classList.add('ncm-bookmark-table');
-
+        if (!table) return;
+        classToggle(table, 'ncm-bookmark-table');
         for (const row of table.querySelectorAll('tr')) {
-            const deleteCheckbox = row.querySelector('input[name="torlendo_konyvjelzok[]"]');
-            const detail = row.querySelector('.bookmark_lenyilo');
-            const selectAll = row.querySelector('#osszes');
+            const deletion = row.querySelector('input[name="torlendo_konyvjelzok[]"]');
+            if (deletion) {
+                classToggle(row, 'ncm-bookmark-row');
+                const title = row.querySelector('.bookmark_name_txt a')?.title || 'könyvjelző';
+                setAttribute(deletion, 'aria-label', `Törlés kijelölése: ${title}`);
+                setAttribute(row.querySelector('select[name^="athelyez["]'), 'aria-label', `Áthelyezés: ${title}`);
+                setAttribute(row.querySelector('input[name^="konyvjelzo_nev["]'), 'aria-label', `Új név: ${title}`);
+            } else if (row.querySelector('.bookmark_lenyilo')) classToggle(row, 'ncm-bookmark-detail-row');
+            else if (row.querySelector('#osszes')) {
+                classToggle(row, 'ncm-bookmark-select-all');
+                setAttribute(row.querySelector('#osszes'), 'aria-label', 'Összes könyvjelző kijelölése törléshez');
+            } else if (row.querySelector('#bookmark_nevszerk')) classToggle(row, 'ncm-bookmark-header');
+            else classToggle(row, 'ncm-bookmark-separator');
+        }
+    }
 
-            if (deleteCheckbox) {
-                row.classList.add('ncm-bookmark-row');
-                const title = row.querySelector('.bookmark_name_txt a')?.getAttribute('title') || 'könyvjelző';
-                deleteCheckbox.setAttribute('aria-label', `Törlés kijelölése: ${title}`);
-
-                const move = row.querySelector('select[name^="athelyez["]');
-                if (move) move.setAttribute('aria-label', `Áthelyezés: ${title}`);
-
-                const rename = row.querySelector('input[name^="konyvjelzo_nev["]');
-                if (rename) rename.setAttribute('aria-label', `Új név: ${title}`);
-            } else if (detail) {
-                row.classList.add('ncm-bookmark-detail-row');
-            } else if (selectAll) {
-                row.classList.add('ncm-bookmark-select-all');
-                selectAll.setAttribute('aria-label', 'Összes könyvjelző kijelölése törléshez');
-            } else if (row.querySelector('#bookmark_nevszerk')) {
-                row.classList.add('ncm-bookmark-header');
-            } else {
-                row.classList.add('ncm-bookmark-separator');
+    function dismissDialog(dialog) {
+        const close = [...dialog.querySelectorAll('a,button,input[type="button"]')].find(e =>
+            !e.classList.contains('ncm-dialog-close') && /mégse|bezár|cancel|close/i.test(`${e.textContent} ${e.value || ''} ${e.title || ''} ${e.getAttribute('aria-label') || ''}`));
+        // Use the site's own dismissal handler, never a save/submit control.
+        if (close) close.click();
+    }
+    function focusables(dialog) {
+        return [...dialog.querySelectorAll('a[href],button,input:not([type="hidden"]),select,textarea,[tabindex]')]
+            .filter(e => !e.disabled && e.tabIndex >= 0 && e.getClientRects().length);
+    }
+    function updateDialogs() {
+        const visible = [...document.querySelectorAll('.generic_dialog')].filter(e => e.isConnected && !e.hidden && getComputedStyle(e).display !== 'none');
+        for (const [dialog, state] of session.dialogs) {
+            if (!visible.includes(dialog) && state.open) {
+                state.open = false;
+                if (state.returnFocus?.isConnected) state.returnFocus.focus({preventScroll:true});
             }
         }
+        for (const dialog of visible) {
+            let state = session.dialogs.get(dialog);
+            if (!state) {
+                state = {open:false, returnFocus:null}; session.dialogs.set(dialog, state);
+                setAttribute(dialog, 'role', 'dialog'); setAttribute(dialog, 'aria-modal', 'true');
+                if (!dialog.hasAttribute('aria-label') && !dialog.hasAttribute('aria-labelledby')) setAttribute(dialog, 'aria-label', 'nCore párbeszédablak');
+                setAttribute(dialog, 'tabindex', '-1');
+                const close = button('Bezárás', 'ncm-dialog-close');
+                const content = dialog.querySelector('#pop_contentdiv,td.pop_content,#pop_content,.generic_dialog_popup') || dialog;
+                content.prepend(close); listen(close, 'click', () => dismissDialog(dialog));
+                listen(dialog, 'keydown', event => {
+                    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismissDialog(dialog); }
+                    if (event.key !== 'Tab') return;
+                    const nodes = focusables(dialog); const first = nodes[0]; const last = nodes[nodes.length-1];
+                    if (!first) { event.preventDefault(); dialog.focus(); }
+                    else if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus(); }
+                    else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+                });
+            }
+            if (!state.open) {
+                state.open = true; state.returnFocus = document.activeElement;
+                const target = dialog.querySelector('input:not([type="hidden"]):not([type="button"]):not([type="submit"]),select,textarea') || focusables(dialog)[0] || dialog;
+                target.focus({preventScroll:true}); target.scrollIntoView({block:'nearest'});
+            }
+        }
+        classToggle(document.body, 'ncm-dialog-locked', visible.length > 0);
     }
 
-    function markPageType() {
-        const path = window.location.pathname.toLowerCase();
-        const action = new URLSearchParams(window.location.search).get('action');
-        if (path.endsWith('/bookmarks.php') || path.startsWith('/bookmarks/')) {
-            document.body.classList.add('ncm-bookmarks-page');
+    function enhance(root) {
+        const rows = new Set();
+        if (root instanceof Element) {
+            const row = root.closest('.box_torrent'); if (row) rows.add(row);
+            if (root.matches('.torrent_lenyilo,.torrent_lenyilo2')) {
+                let previous = root.previousElementSibling;
+                for (let i = 0; previous && i < 4; i++, previous = previous.previousElementSibling) {
+                    if (previous.matches('.box_torrent')) { rows.add(previous); break; }
+                }
+            }
         }
-        if (path.endsWith('/torrents.php')) {
-            document.body.classList.add('ncm-torrents-page');
-        }
-        if ((path.endsWith('/torrents.php') && action === 'details') || document.getElementById('details1')) {
-            document.body.classList.add('ncm-details-page');
-        }
+        for (const row of root.querySelectorAll?.('.box_torrent') || []) rows.add(row);
+        for (const row of rows) enhanceRow(row);
+        for (const node of root.querySelectorAll?.('.bookmark_szerk') || []) keyboard(node, 'Könyvjelző nevének szerkesztése');
+        for (const node of root.querySelectorAll?.('#bookmark_groupsel') || []) setAttribute(node, 'aria-label', 'Könyvjelző csoport');
+        for (const node of root.querySelectorAll?.('.torrent_kep_ico2 .fancy_groups') || []) setAttribute(node, 'aria-label', 'Mellékelt kép megnyitása');
     }
 
-    function torrentRowForPanel(panel) {
-        let sibling = panel.previousElementSibling;
-        let remaining = 3;
-        while (sibling && remaining > 0) {
-            if (sibling.classList.contains('box_torrent')) return sibling;
-            sibling = sibling.previousElementSibling;
-            remaining -= 1;
-        }
-        return null;
-    }
-
-    function syncTorrentPanel(panel) {
-        if (!(panel instanceof Element) || !panel.matches('.torrent_lenyilo, .torrent_lenyilo2')) return;
-        const row = torrentRowForPanel(panel);
-        if (!row) return;
-        row.classList.toggle('ncm-expanded', panel.style.display !== 'none');
-    }
-
-    function syncAllTorrentPanels(root) {
-        for (const panel of elementsIn(root, '.torrent_lenyilo, .torrent_lenyilo2')) {
-            syncTorrentPanel(panel);
-        }
-    }
-
-    function startDynamicObserver() {
-        if (!document.body) return;
-        const observer = new MutationObserver((mutations) => {
+    function activate() {
+        if (session || !document.body) return;
+        session = { controller:new AbortController(), owned:new Set(), attributes:new Map(), classes:new Map(), moved:new Map(),
+            rows:new WeakMap(), keyboard:new WeakSet(), dialogs:new Map(), panelIndex:0, pending:new Set(), frame:0 };
+        classToggle(document.documentElement, 'ncm-enabled');
+        const style = own(element('style')); style.textContent = css + improvements;
+        (document.head || document.documentElement).appendChild(style);
+        let viewport = document.querySelector('meta[name="viewport"]');
+        if (!viewport) { viewport = own(element('meta')); viewport.name = 'viewport'; document.head.appendChild(viewport); }
+        setAttribute(viewport, 'content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+        const action = new URLSearchParams(location.search).get('action');
+        if (/\/torrents.php$/i.test(location.pathname)) classToggle(document.body, 'ncm-torrents-page');
+        if (action === 'details' || document.getElementById('details1')) classToggle(document.body, 'ncm-details-page');
+        if (/\/bookmarks(?:\.php|\/)/i.test(location.pathname)) classToggle(document.body, 'ncm-bookmarks-page');
+        initHeader(); initFilters(); initSorting(); initPagination(); enhanceBookmarksPage(); enhance(document); updateDialogs();
+        session.observer = new MutationObserver(mutations => {
+            if (!session) return;
             for (const mutation of mutations) {
-                if (mutation.type === 'attributes') {
-                    syncTorrentPanel(mutation.target);
-                    continue;
-                }
-                for (const node of mutation.addedNodes) {
-                    if (node.nodeType !== Node.ELEMENT_NODE) continue;
-                    enhanceDynamicContent(node);
-                    syncAllTorrentPanels(node);
-                }
+                if (mutation.type === 'attributes' && !mutation.target.matches('.torrent_lenyilo,.torrent_lenyilo2,.generic_dialog')) continue;
+                session.pending.add(mutation.target instanceof Element ? mutation.target : mutation.target.parentElement);
+                for (const node of mutation.addedNodes || []) if (node instanceof Element) session.pending.add(node);
             }
+            if (!session.frame && session.pending.size) session.frame = requestAnimationFrame(() => {
+                if (!session) return;
+                session.frame = 0; const roots = [...session.pending]; session.pending.clear();
+                for (const root of roots) if (root?.isConnected) enhance(root);
+                updateDialogs(); session.updateFilters?.();
+            });
         });
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style']
-        });
+        session.observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','hidden']});
     }
 
-    function init() {
-        markPageType();
-        initLogoLink();
-        initNavigation();
-        initTorrentFilters();
-        enhanceBookmarksPage();
-        enhanceDynamicContent(document);
-        syncAllTorrentPanels(document);
-        startDynamicObserver();
+    function deactivate() {
+        if (!session) return;
+        const old = session;
+        old.observer?.disconnect(); old.controller.abort(); cancelAnimationFrame(old.frame);
+        // Restore moved originals before removing the containers that temporarily held them.
+        for (const [node, marker] of [...old.moved].reverse()) {
+            if (marker.parentNode && node.isConnected) marker.replaceWith(node);
+            else marker.remove();
+        }
+        for (const node of old.owned) node.remove();
+        for (const [node, attributes] of old.attributes) for (const [name, record] of attributes) {
+            // Do not overwrite a subsequent change made by the site or another extension.
+            if (node.getAttribute(name) !== record.after) continue;
+            if (record.before === null) node.removeAttribute(name); else node.setAttribute(name, record.before);
+        }
+        for (const [node, classes] of old.classes) for (const [name, before] of classes) node.classList.toggle(name, before);
+        session = null;
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init, { once: true });
-    } else {
-        init();
+    function updateMode() {
+        // Before a mobile viewport exists, use the device width rather than its legacy 980px layout viewport.
+        const hasViewport = !!document.querySelector('meta[name="viewport"]');
+        const small = narrow.matches || (!hasViewport && touch.matches && window.screen.width <= MOBILE_BREAKPOINT);
+        const enabled = mode !== 'desktop' && small && (mode === 'mobile' || touch.matches);
+        if (enabled) activate(); else deactivate();
     }
+    function chooseMode(next) {
+        mode = next;
+        if (typeof GM_setValue === 'function') GM_setValue('layoutMode', next);
+        updateMode();
+    }
+    if (typeof GM_registerMenuCommand === 'function') {
+        GM_registerMenuCommand('Nézet: automatikus (érintőképernyő)', () => chooseMode('auto'));
+        GM_registerMenuCommand('Nézet: mobil (keskeny ablakban)', () => chooseMode('mobile'));
+        GM_registerMenuCommand('Nézet: eredeti asztali', () => chooseMode('desktop'));
+    }
+    for (const media of [narrow, touch]) {
+        if (media.addEventListener) media.addEventListener('change', updateMode);
+        else media.addListener(updateMode);
+    }
+    window.addEventListener('resize', updateMode);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', updateMode, {once:true});
+    else updateMode();
 })();
