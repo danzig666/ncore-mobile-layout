@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         nCore mobilnézet
 // @namespace    local.ncore.mobile
-// @version      1.3.2
+// @version      1.3.3
 // @description  Érintésbarát mobilfelület, változatlan asztali nézettel; nCore aNi mellett is használható.
 // @homepageURL  https://github.com/danzig666/ncore-mobile-layout
 // @supportURL   https://github.com/danzig666/ncore-mobile-layout/issues
@@ -1723,6 +1723,11 @@
     #kategoriak td[hidden] { display: none !important; }
     #kategoriak .ncm-check-cell { width: auto !important; padding: 0 !important; min-width: 0; }
     .ncm-check-label { display: flex; min-height: 44px; align-items: center; gap: 3px; padding: 4px; overflow-wrap: anywhere; cursor: pointer; }
+    #kategoriak .ncm-link-cell { display: flex; align-items: stretch; gap: 4px; }
+    #kategoriak .ncm-checkbox-only { flex: 0 0 44px; width: 44px; justify-content: center; padding: 0; border: 1px solid var(--ncm-border); border-radius: 6px; }
+    #kategoriak .ncm-checkbox-only input { margin: 0; }
+    #kategoriak .ncm-category-link { display: flex; flex: 1; align-items: center; justify-content: center; min-width: 0; min-height: 44px; padding: 6px; border: 1px solid var(--ncm-border); border-radius: 6px; background: var(--ncm-dark); overflow-wrap: anywhere; }
+    .ncm-check-text { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     #kategoriak #cimkek_lista { max-width: 100%; }
     .ncm-browse-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; }
     .ncm-browse-controls label { flex: 1; min-width: 100px; }
@@ -1757,15 +1762,12 @@
         position: static !important; min-width: 44px; margin-left: auto !important; flex: 0 0 44px;
     }
     .box_torrent .box_feltoltve2, .box_torrent .box_meret2, .box_torrent .box_d2,
+    .box_torrent .box_feltolto2, .box_torrent.ncm-expanded .box_feltolto2,
     .box_torrent:not(.ncm-expanded) .box_feltoltve2, .box_torrent:not(.ncm-expanded) .box_meret2,
     .box_torrent.ncm-expanded .box_feltoltve2, .box_torrent.ncm-expanded .box_meret2, .box_torrent.ncm-expanded .box_d2,
     .box_torrent .users_box_sepa, .box_torrent .users_box_sepa2,
     .box_torrent .box_s2, .box_torrent .box_l2,
     .box_torrent.ncm-expanded .box_s2, .box_torrent.ncm-expanded .box_l2 { display: none !important; }
-    .box_torrent.ncm-expanded .box_feltolto2 {
-        display: block !important; position: static; width: 100% !important;
-        min-height: 0; padding: 6px 10px !important; font-size: 12px;
-    }
     .box_torrent .box_feltoltve2::before, .box_torrent .box_meret2::before,
     .box_torrent .box_d2::before, .box_torrent .box_feltolto2::before { font-size: 11px; }
     /* Optional aNi wrappers; native rows do not depend on these selectors. */
@@ -1952,20 +1954,28 @@
             const labelCell = cell?.nextElementSibling;
             const text = labelCell?.textContent.trim();
             if (!cell || !labelCell || !text) continue;
+            const categoryLink = labelCell.querySelector('a[href]');
             const label = own(element('label', 'ncm-check-label'));
             if (!checkbox.id) setAttribute(checkbox, 'id', `ncm-category-${++checkIndex}`);
             setAttribute(checkbox, 'aria-label', text);
             label.htmlFor = checkbox.id;
             // Retain the original category nodes for exact desktop restoration.
             move(checkbox, label);
-            label.appendChild(element('span', '', text));
+            label.appendChild(element('span', categoryLink ? 'ncm-check-text' : '', text));
+            if (categoryLink) {
+                label.classList.add('ncm-checkbox-only');
+                label.title = /^nyit_/.test(checkbox.name) ? `${text}: altípusok megnyitása` : `${text}: kiválasztás`;
+                classToggle(categoryLink, 'ncm-category-link');
+                classToggle(labelCell, 'ncm-link-cell');
+            }
             for (const original of [...labelCell.childNodes]) {
+                if (original === categoryLink) continue;
                 if (original.nodeType === Node.ELEMENT_NODE) setAttribute(original, 'hidden', '');
                 else if (original.nodeType === Node.TEXT_NODE && original.textContent.trim()) {
                     const span = own(element('span')); original.before(span); move(original, span); span.hidden = true;
                 }
             }
-            labelCell.appendChild(label);
+            labelCell.prepend(label);
             classToggle(labelCell, 'ncm-check-cell'); setAttribute(cell, 'hidden', '');
         }
         const update = () => {
@@ -2107,7 +2117,7 @@
             state.metaKey = metaKey; state.meta.replaceChildren();
             for (const text of pieces) state.meta.appendChild(element('span', text === '0 seed' ? 'ncm-zero-seed' : '', text));
         }
-        const statusNames = {torrent_gold:'Arany', torrent_hidden:'Rejtett', torrent_unchecked:'Ellenőrizetlen', torrent_err:'Hibás'};
+        const statusNames = {torrent_gold:'Arany', torrent_hidden:'Rejtett', torrent_err:'Hibás'};
         const status = Object.entries(statusNames).filter(([cls]) => row.querySelector(`.${cls}`));
         const statusKey = status.map(([cls]) => cls).join('|');
         if (state.statusKey !== statusKey) {
